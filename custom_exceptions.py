@@ -52,24 +52,24 @@ class CorruptedDataError(DataError):
 
 # Character Exceptions
 class InvalidCharacterClassError(CharacterError):
-    """Raised when an invalid character class is specified"""
+    """Raised when an invalid character class is chosen"""
     pass
 
 class CharacterNotFoundError(CharacterError):
-    """Raised when trying to load a character that doesn't exist"""
-    pass
-
-class CharacterDeadError(CharacterError):
-    """Raised when trying to perform actions with a dead character"""
+    """Raised when a save file for the character is not found"""
     pass
 
 class InsufficientLevelError(CharacterError):
-    """Raised when character level is too low for an action"""
+    """Raised when a character's level is too low for an action"""
+    pass
+
+class CharacterDeadError(CharacterError):
+    """Raised when a character is dead and attempts an action"""
     pass
 
 # Combat Exceptions
 class InvalidTargetError(CombatError):
-    """Raised when trying to target an invalid enemy"""
+    """Raised when a target is not a valid enemy"""
     pass
 
 class CombatNotActiveError(CombatError):
@@ -122,4 +122,3 @@ class SaveFileCorruptedError(GameError):
 class InvalidSaveDataError(GameError):
     """Raised when save file contains invalid data"""
     pass
-
