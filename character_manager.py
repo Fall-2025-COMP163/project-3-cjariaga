@@ -1,248 +1,207 @@
 """
 COMP 163 - Project 3: Quest Chronicles
-Character Manager Module - Starter Code
+Game Data Module
 
-Name: [Your Name Here]
-
-AI Usage: [Document any AI assistance used]
-
-This module handles character creation, loading, and saving.
+This module handles loading and validating game data from text files.
 """
 
 import os
 from custom_exceptions import (
-    InvalidCharacterClassError,
-    CharacterNotFoundError,
-    SaveFileCorruptedError,
-    InvalidSaveDataError,
-    CharacterDeadError
+    InvalidDataFormatError,
+    MissingDataFileError,
+    CorruptedDataError
 )
 
 # ============================================================================
-# CHARACTER MANAGEMENT FUNCTIONS
+# DATA DEFINITIONS (Used for creating default files)
 # ============================================================================
 
-def create_character(name, character_class):
-    """
-    Create a new character with stats based on class
-    
-    Valid classes: Warrior, Mage, Rogue, Cleric
-    
-    Returns: Dictionary with character data including:
-            - name, class, level, health, max_health, strength, magic
-            - experience, gold, inventory, active_quests, completed_quests
-    
-    Raises: InvalidCharacterClassError if class is not valid
-    """
-    # TODO: Implement character creation
-    # Validate character_class first
-    # Example base stats:
-    # Warrior: health=120, strength=15, magic=5
-    # Mage: health=80, strength=8, magic=20
-    # Rogue: health=90, strength=12, magic=10
-    # Cleric: health=100, strength=10, magic=15
-    
-    # All characters start with:
-    # - level=1, experience=0, gold=100
-    # - inventory=[], active_quests=[], completed_quests=[]
-    
-    # Raise InvalidCharacterClassError if class not in valid list
-    pass
+# Define default quest data blocks
+DEFAULT_QUESTS = [
+    """QUEST_ID: tutorial_1
+TITLE: The First Step
+DESCRIPTION: Defeat a single goblin to prove your worth.
+REWARD_XP: 100
+REWARD_GOLD: 50
+REQUIRED_LEVEL: 1
+PREREQUISITE: NONE""",
+    """QUEST_ID: warrior_path
+TITLE: The Orc Menace
+DESCRIPTION: Clear the southern woods of a fearsome Orc.
+REWARD_XP: 300
+REWARD_GOLD: 150
+REQUIRED_LEVEL: 3
+PREREQUISITE: tutorial_1""",
+    """QUEST_ID: mountain_trial
+TITLE: The Dragon's Roar
+DESCRIPTION: Face the ultimate foe, a Dragon, atop the mountain.
+REWARD_XP: 1000
+REWARD_GOLD: 500
+REQUIRED_LEVEL: 6
+PREREQUISITE: warrior_path"""
+]
 
-def save_character(character, save_directory="data/save_games"):
-    """
-    Save character to file
-    
-    Filename format: {character_name}_save.txt
-    
-    File format:
-    NAME: character_name
-    CLASS: class_name
-    LEVEL: 1
-    HEALTH: 120
-    MAX_HEALTH: 120
-    STRENGTH: 15
-    MAGIC: 5
-    EXPERIENCE: 0
-    GOLD: 100
-    INVENTORY: item1,item2,item3
-    ACTIVE_QUESTS: quest1,quest2
-    COMPLETED_QUESTS: quest1,quest2
-    
-    Returns: True if successful
-    Raises: PermissionError, IOError (let them propagate or handle)
-    """
-    # TODO: Implement save functionality
-    # Create save_directory if it doesn't exist
-    # Handle any file I/O errors appropriately
-    # Lists should be saved as comma-separated values
-    pass
-
-def load_character(character_name, save_directory="data/save_games"):
-    """
-    Load character from save file
-    
-    Args:
-        character_name: Name of character to load
-        save_directory: Directory containing save files
-    
-    Returns: Character dictionary
-    Raises: 
-        CharacterNotFoundError if save file doesn't exist
-        SaveFileCorruptedError if file exists but can't be read
-        InvalidSaveDataError if data format is wrong
-    """
-    # TODO: Implement load functionality
-    # Check if file exists → CharacterNotFoundError
-    # Try to read file → SaveFileCorruptedError
-    # Validate data format → InvalidSaveDataError
-    # Parse comma-separated lists back into Python lists
-    pass
-
-def list_saved_characters(save_directory="data/save_games"):
-    """
-    Get list of all saved character names
-    
-    Returns: List of character names (without _save.txt extension)
-    """
-    # TODO: Implement this function
-    # Return empty list if directory doesn't exist
-    # Extract character names from filenames
-    pass
-
-def delete_character(character_name, save_directory="data/save_games"):
-    """
-    Delete a character's save file
-    
-    Returns: True if deleted successfully
-    Raises: CharacterNotFoundError if character doesn't exist
-    """
-    # TODO: Implement character deletion
-    # Verify file exists before attempting deletion
-    pass
+# Define default item data blocks
+DEFAULT_ITEMS = [
+    """ITEM_ID: health_potion
+NAME: Health Potion
+TYPE: consumable
+EFFECT: health:30
+DESCRIPTION: Restores 30 Health.""",
+    """ITEM_ID: mana_potion
+NAME: Mana Potion
+TYPE: consumable
+EFFECT: magic:15
+DESCRIPTION: Restores 15 Magic (for future use).""",
+    """ITEM_ID: rusty_sword
+NAME: Rusty Sword
+TYPE: weapon
+EFFECT: strength:5
+DESCRIPTION: A weak but reliable weapon.""",
+    """ITEM_ID: leather_armor
+NAME: Leather Armor
+TYPE: armor
+EFFECT: max_health:10
+DESCRIPTION: Provides minor defense.""",
+]
 
 # ============================================================================
-# CHARACTER OPERATIONS
+# PARSING FUNCTIONS
 # ============================================================================
 
-def gain_experience(character, xp_amount):
-    """
-    Add experience to character and handle level ups
-    
-    Level up formula: level_up_xp = current_level * 100
-    Example when leveling up:
-    - Increase level by 1
-    - Increase max_health by 10
-    - Increase strength by 2
-    - Increase magic by 2
-    - Restore health to max_health
-    
-    Raises: CharacterDeadError if character health is 0
-    """
-    # TODO: Implement experience gain and leveling
-    # Check if character is dead first
-    # Add experience
-    # Check for level up (can level up multiple times)
-    # Update stats on level up
-    pass
+def _parse_data_block(lines, data_type, required_fields):
+    """Internal helper to parse a generic data block."""
+    data = {}
+    try:
+        for line in lines:
+            if not line.strip(): continue
+            key, value = line.split(": ", 1)
+            data[key.strip()] = value.strip()
+            
+        for field in required_fields:
+            if field not in data:
+                raise InvalidDataFormatError(f"Missing required field '{field}' in {data_type} block.")
+                
+        # Type conversion
+        if 'REWARD_XP' in data: data['REWARD_XP'] = int(data['REWARD_XP'])
+        if 'REWARD_GOLD' in data: data['REWARD_GOLD'] = int(data['REWARD_GOLD'])
+        if 'REQUIRED_LEVEL' in data: data['REQUIRED_LEVEL'] = int(data['REQUIRED_LEVEL'])
+            
+    except ValueError as e:
+        raise InvalidDataFormatError(f"Type conversion error in {data_type} block: {e}")
+    except Exception as e:
+        raise InvalidDataFormatError(f"General parsing error in {data_type} block: {e}")
+        
+    return data
 
-def add_gold(character, amount):
-    """
-    Add gold to character's inventory
-    
-    Args:
-        character: Character dictionary
-        amount: Amount of gold to add (can be negative for spending)
-    
-    Returns: New gold total
-    Raises: ValueError if result would be negative
-    """
-    # TODO: Implement gold management
-    # Check that result won't be negative
-    # Update character's gold
-    pass
+def parse_quest_block(lines):
+    """Parse a block of lines into a quest dictionary."""
+    required = ['QUEST_ID', 'TITLE', 'DESCRIPTION', 'REWARD_XP', 'REWARD_GOLD', 'REQUIRED_LEVEL', 'PREREQUISITE']
+    return _parse_data_block(lines, "quest", required)
 
-def heal_character(character, amount):
-    """
-    Heal character by specified amount
-    
-    Health cannot exceed max_health
-    
-    Returns: Actual amount healed
-    """
-    # TODO: Implement healing
-    # Calculate actual healing (don't exceed max_health)
-    # Update character health
-    pass
-
-def is_character_dead(character):
-    """
-    Check if character's health is 0 or below
-    
-    Returns: True if dead, False if alive
-    """
-    # TODO: Implement death check
-    pass
-
-def revive_character(character):
-    """
-    Revive a dead character with 50% health
-    
-    Returns: True if revived
-    """
-    # TODO: Implement revival
-    # Restore health to half of max_health
-    pass
+def parse_item_block(lines):
+    """Parse a block of lines into an item dictionary."""
+    required = ['ITEM_ID', 'NAME', 'TYPE', 'EFFECT', 'DESCRIPTION']
+    return _parse_data_block(lines, "item", required)
 
 # ============================================================================
-# VALIDATION
+# DATA LOADING FUNCTIONS
 # ============================================================================
 
-def validate_character_data(character):
-    """
-    Validate that character dictionary has all required fields
+def _load_data_file(filename, parse_func, id_key):
+    """Internal helper to load and parse a generic data file."""
+    data_dict = {}
     
-    Required fields: name, class, level, health, max_health, 
-                    strength, magic, experience, gold, inventory,
-                    active_quests, completed_quests
-    
-    Returns: True if valid
-    Raises: InvalidSaveDataError if missing fields or invalid types
+    try:
+        with open(filename, 'r') as f:
+            content = f.read()
+    except FileNotFoundError:
+        raise MissingDataFileError(f"Data file not found: {filename}")
+    except Exception as e:
+        raise CorruptedDataError(f"Error reading file {filename}: {e}")
+
+    # Split content into blocks by two or more newlines
+    blocks = [b.strip().split('\n') for b in content.split('\n\n') if b.strip()]
+
+    for block in blocks:
+        if not block: continue
+        try:
+            parsed_data = parse_func(block)
+            data_id = parsed_data[id_key]
+            if data_id in data_dict:
+                raise InvalidDataFormatError(f"Duplicate ID found: {data_id} in {filename}")
+            data_dict[data_id] = parsed_data
+        except InvalidDataFormatError as e:
+            raise InvalidDataFormatError(f"Error in {filename} block: {e}")
+            
+    return data_dict
+
+def load_quests(filename="data/quests.txt"):
+    """Load quest data from file."""
+    return _load_data_file(filename, parse_quest_block, 'QUEST_ID')
+
+def load_items(filename="data/items.txt"):
+    """Load item data from file."""
+    return _load_data_file(filename, parse_item_block, 'ITEM_ID')
+
+# ============================================================================
+# DATA FILE CREATION
+# ============================================================================
+
+def create_default_data_files():
     """
-    # TODO: Implement validation
-    # Check all required keys exist
-    # Check that numeric values are numbers
-    # Check that lists are actually lists
-    pass
+    Create the 'data' directory and default quest/item files if they don't exist.
+    """
+    data_dir = "data"
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+        
+    # Write Quests
+    quest_file = os.path.join(data_dir, "quests.txt")
+    if not os.path.exists(quest_file):
+        with open(quest_file, 'w') as f:
+            f.write('\n\n'.join(DEFAULT_QUESTS))
+            
+    # Write Items
+    item_file = os.path.join(data_dir, "items.txt")
+    if not os.path.exists(item_file):
+        with open(item_file, 'w') as f:
+            f.write('\n\n'.join(DEFAULT_ITEMS))
+            
+    print("Default data files created in the 'data/' directory.")
 
 # ============================================================================
 # TESTING
 # ============================================================================
 
 if __name__ == "__main__":
-    print("=== CHARACTER MANAGER TEST ===")
+    print("=== GAME DATA MODULE TEST ===")
     
-    # Test character creation
-    # try:
-    #     char = create_character("TestHero", "Warrior")
-    #     print(f"Created: {char['name']} the {char['class']}")
-    #     print(f"Stats: HP={char['health']}, STR={char['strength']}, MAG={char['magic']}")
-    # except InvalidCharacterClassError as e:
-    #     print(f"Invalid class: {e}")
+    # Test creating default files
+    create_default_data_files()
     
-    # Test saving
-    # try:
-    #     save_character(char)
-    #     print("Character saved successfully")
-    # except Exception as e:
-    #     print(f"Save error: {e}")
+    # Test loading quests
+    try:
+        quests = load_quests()
+        print(f"Loaded {len(quests)} quests:")
+        for q_id, q_data in quests.items():
+            print(f" - {q_data['TITLE']} (Lvl {q_data['REQUIRED_LEVEL']})")
+    except MissingDataFileError:
+        print("Quest file not found (should not happen after creation)")
+    except InvalidDataFormatError as e:
+        print(f"Invalid quest format: {e}")
+    except CorruptedDataError as e:
+        print(f"Corrupted quest file: {e}")
     
-    # Test loading
-    # try:
-    #     loaded = load_character("TestHero")
-    #     print(f"Loaded: {loaded['name']}")
-    # except CharacterNotFoundError:
-    #     print("Character not found")
-    # except SaveFileCorruptedError:
-    #     print("Save file corrupted")
-
+    # Test loading items
+    try:
+        items = load_items()
+        print(f"Loaded {len(items)} items:")
+        for i_id, i_data in items.items():
+            print(f" - {i_data['NAME']} ({i_data['TYPE']})")
+    except MissingDataFileError:
+        print("Item file not found (should not happen after creation)")
+    except InvalidDataFormatError as e:
+        print(f"Invalid item format: {e}")
+    except CorruptedDataError as e:
+        print(f"Corrupted item file: {e}")
