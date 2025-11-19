@@ -26,12 +26,8 @@ from custom_exceptions import (
 
 def load_quests(filename="data/quests.txt"):
     """Load quest data from file"""
-    # Auto-create if missing
     if not os.path.exists(filename):
-        if filename == "data/quests.txt":
-            create_default_data_files()
-        if not os.path.exists(filename):
-            raise MissingDataFileError(f"File not found: {filename}")
+        raise MissingDataFileError(f"File not found: {filename}")
 
     try:
         with open(filename, 'r') as f:
@@ -53,12 +49,8 @@ def load_quests(filename="data/quests.txt"):
 
 def load_items(filename="data/items.txt"):
     """Load item data from file"""
-    # Auto-create if missing
     if not os.path.exists(filename):
-        if filename == "data/items.txt":
-            create_default_data_files()
-        if not os.path.exists(filename):
-            raise MissingDataFileError(f"File not found: {filename}")
+        raise MissingDataFileError(f"File not found: {filename}")
 
     try:
         with open(filename, 'r') as f:
