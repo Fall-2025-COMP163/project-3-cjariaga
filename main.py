@@ -15,6 +15,7 @@ Demonstrates module integration and complete game flow.
 """
 
 import sys
+import os
 import character_manager
 import inventory_system
 import quest_handler
@@ -286,6 +287,9 @@ def load_game_data():
     """Load quest and item data"""
     global all_quests, all_items
 
+    # Ensure data directory exists
+    os.makedirs("data", exist_ok=True)
+    
     try:
         all_quests = game_data.load_quests()
         all_items = game_data.load_items()
