@@ -2,9 +2,12 @@
 COMP 163 - Project 3: Quest Chronicles
 Game Data Module - Starter Code
 
-Name: Clayan Ariaga
+Name: Clayan
 
-AI Usage: [Document any AI assistance used]
+AI Usage: Gemini, was used on this file based on the provided
+starter code, README.md, and data files (items.txt, quests.txt).
+My logic involved parsing text files, handling potential file I/O
+and formatting errors, and structuring the data into dictionaries.
 
 This module handles loading and validating game data from text files.
 """
@@ -16,196 +19,300 @@ from custom_exceptions import (
     CorruptedDataError
 )
 
-# ============================================================================
-# DATA DEFINITIONS (Used for creating default files)
-# ============================================================================
-
-# Define default quest data blocks
-DEFAULT_QUESTS = [
-    """QUEST_ID: tutorial_1
-TITLE: The First Step
-DESCRIPTION: Defeat a single goblin to prove your worth.
-REWARD_XP: 100
-REWARD_GOLD: 50
-REQUIRED_LEVEL: 1
-PREREQUISITE: NONE""",
-    """QUEST_ID: warrior_path
-TITLE: The Orc Menace
-DESCRIPTION: Clear the southern woods of a fearsome Orc.
-REWARD_XP: 300
-REWARD_GOLD: 150
-REQUIRED_LEVEL: 3
-PREREQUISITE: tutorial_1""",
-    """QUEST_ID: mountain_trial
-TITLE: The Dragon's Roar
-DESCRIPTION: Face the ultimate foe, a Dragon, atop the mountain.
-REWARD_XP: 1000
-REWARD_GOLD: 500
-REQUIRED_LEVEL: 6
-PREREQUISITE: warrior_path"""
-]
-
-# Define default item data blocks
-DEFAULT_ITEMS = [
-    """ITEM_ID: health_potion
-NAME: Health Potion
-TYPE: consumable
-EFFECT: health:30
-DESCRIPTION: Restores 30 Health.""",
-    """ITEM_ID: mana_potion
-NAME: Mana Potion
-TYPE: consumable
-EFFECT: magic:15
-DESCRIPTION: Restores 15 Magic (for future use).""",
-    """ITEM_ID: rusty_sword
-NAME: Rusty Sword
-TYPE: weapon
-EFFECT: strength:5
-DESCRIPTION: A weak but reliable weapon.""",
-    """ITEM_ID: leather_armor
-NAME: Leather Armor
-TYPE: armor
-EFFECT: max_health:10
-DESCRIPTION: Provides minor defense.""",
-]
 
 # ============================================================================
-# PARSING FUNCTIONS
+# DATA LOADING
 # ============================================================================
 
-def _parse_data_block(lines, data_type, required_fields):
-    """Internal helper to parse a generic data block."""
-    data = {}
-    try:
-        for line in lines:
-            if not line.strip(): continue
-            key, value = line.split(": ", 1)
-            data[key.strip()] = value.strip()
-            
-        for field in required_fields:
-            if field not in data:
-                raise InvalidDataFormatError(f"Missing required field '{field}' in {data_type} block.")
-                
-        # Type conversion
-        if 'REWARD_XP' in data: data['REWARD_XP'] = int(data['REWARD_XP'])
-        if 'REWARD_GOLD' in data: data['REWARD_GOLD'] = int(data['REWARD_GOLD'])
-        if 'REQUIRED_LEVEL' in data: data['REQUIRED_LEVEL'] = int(data['REQUIRED_LEVEL'])
-            
-    except ValueError as e:
-        raise InvalidDataFormatError(f"Type conversion error in {data_type} block: {e}")
-    except Exception as e:
-        raise InvalidDataFormatError(f"General parsing error in {data_type} block: {e}")
-        
-    return data
+def load_quests(filename="data/quests.txt"):
+    """Load quest data from file"""
+    if not os.path.exists(filename):
+        raise MissingDataFileError(f"File not found: {filename}")
 
-def parse_quest_block(lines):
-    """Parse a block of lines into a quest dictionary."""
-    required = ['QUEST_ID', 'TITLE', 'DESCRIPTION', 'REWARD_XP', 'REWARD_GOLD', 'REQUIRED_LEVEL', 'PREREQUISITE']
-    return _parse_data_block(lines, "quest", required)
-
-def parse_item_block(lines):
-    """Parse a block of lines into an item dictionary."""
-    required = ['ITEM_ID', 'NAME', 'TYPE', 'EFFECT', 'DESCRIPTION']
-    return _parse_data_block(lines, "item", required)
-
-# ============================================================================
-# DATA LOADING FUNCTIONS
-# ============================================================================
-
-def _load_data_file(filename, parse_func, id_key):
-    """Internal helper to load and parse a generic data file."""
-    data_dict = {}
-    
     try:
         with open(filename, 'r') as f:
             content = f.read()
-    except FileNotFoundError:
-        raise MissingDataFileError(f"Data file not found: {filename}")
-    except Exception as e:
-        raise CorruptedDataError(f"Error reading file {filename}: {e}")
 
-    # Split content into blocks by two or more newlines
-    blocks = [b.strip().split('\n') for b in content.split('\n\n') if b.strip()]
+        blocks = [b.strip() for b in content.split('\n\n') if b.strip()]
+        quests = {}
 
-    for block in blocks:
-        if not block: continue
-        try:
-            parsed_data = parse_func(block)
-            data_id = parsed_data[id_key]
-            if data_id in data_dict:
-                raise InvalidDataFormatError(f"Duplicate ID found: {data_id} in {filename}")
-            data_dict[data_id] = parsed_data
-        except InvalidDataFormatError as e:
-            raise InvalidDataFormatError(f"Error in {filename} block: {e}")
-            
-    return data_dict
+        for block in blocks:
+            quest = parse_quest_block(block.split('\n'))
+            validate_quest_data(quest)
+            quests[quest['quest_id']] = quest
 
-def load_quests(filename="data/quests.txt"):
-    """Load quest data from file."""
-    return _load_data_file(filename, parse_quest_block, 'QUEST_ID')
+        return quests
+
+    except (IOError, ValueError) as e:
+        raise CorruptedDataError(f"Failed to load quests: {e}")
+
 
 def load_items(filename="data/items.txt"):
-    """Load item data from file."""
-    return _load_data_file(filename, parse_item_block, 'ITEM_ID')
+    """Load item data from file"""
+    if not os.path.exists(filename):
+        raise MissingDataFileError(f"File not found: {filename}")
+
+    try:
+        with open(filename, 'r') as f:
+            content = f.read()
+
+        blocks = [b.strip() for b in content.split('\n\n') if b.strip()]
+        items = {}
+
+        for block in blocks:
+            item = parse_item_block(block.split('\n'))
+            validate_item_data(item)
+            items[item['item_id']] = item
+
+        return items
+
+    except (IOError, ValueError) as e:
+        raise CorruptedDataError(f"Failed to load items: {e}")
+
 
 # ============================================================================
-# DATA FILE CREATION
+# PARSING
+# ============================================================================
+
+def parse_quest_block(lines):
+    """Parse quest block into dictionary"""
+    quest = {}
+
+    for line in lines:
+        if ": " not in line:
+            raise InvalidDataFormatError(f"Invalid line: {line}")
+
+        key, value = line.split(": ", 1)
+        key = key.strip().lower()
+        value = value.strip()
+
+        if key == "quest_id":
+            quest['quest_id'] = value
+        elif key == "title":
+            quest['title'] = value
+        elif key == "description":
+            quest['description'] = value
+        elif key == "reward_xp":
+            quest['reward_xp'] = int(value)
+        elif key == "reward_gold":
+            quest['reward_gold'] = int(value)
+        elif key == "required_level":
+            quest['required_level'] = int(value)
+        elif key == "prerequisite":
+            quest['prerequisite'] = value
+
+    return quest
+
+
+def parse_item_block(lines):
+    """Parse item block into dictionary"""
+    item = {}
+
+    for line in lines:
+        if ": " not in line:
+            raise InvalidDataFormatError(f"Invalid line: {line}")
+
+        key, value = line.split(": ", 1)
+        key = key.strip().lower()
+        value = value.strip()
+
+        if key == "item_id":
+            item['item_id'] = value
+        elif key == "name":
+            item['name'] = value
+        elif key == "type":
+            item['type'] = value.lower()
+        elif key == "effect":
+            item['effect'] = value
+        elif key == "cost":
+            item['cost'] = int(value)
+        elif key == "description":
+            item['description'] = value
+
+    return item
+
+
+# ============================================================================
+# VALIDATION
+# ============================================================================
+
+def validate_quest_data(quest):
+    """Validate quest dictionary has required fields"""
+    required = ['quest_id', 'title', 'description', 'reward_xp',
+                'reward_gold', 'required_level', 'prerequisite']
+
+    for field in required:
+        if field not in quest:
+            raise InvalidDataFormatError(f"Missing field: {field}")
+
+    if not isinstance(quest['reward_xp'], int):
+        raise InvalidDataFormatError("reward_xp must be integer")
+    if not isinstance(quest['reward_gold'], int):
+        raise InvalidDataFormatError("reward_gold must be integer")
+    if not isinstance(quest['required_level'], int):
+        raise InvalidDataFormatError("required_level must be integer")
+
+    return True
+
+
+def validate_item_data(item):
+    """Validate item dictionary has required fields"""
+    required = ['item_id', 'name', 'type', 'effect', 'cost', 'description']
+    valid_types = ['weapon', 'armor', 'consumable']
+
+    for field in required:
+        if field not in item:
+            raise InvalidDataFormatError(f"Missing field: {field}")
+
+    if item['type'] not in valid_types:
+        raise InvalidDataFormatError(f"Invalid type: {item['type']}")
+
+    if not isinstance(item['cost'], int):
+        raise InvalidDataFormatError("cost must be integer")
+
+    return True
+
+
+# ============================================================================
+# DEFAULT DATA CREATION
 # ============================================================================
 
 def create_default_data_files():
-    """
-    Create the 'data' directory and default quest/item files if they don't exist.
-    """
-    data_dir = "data"
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
-        
-    # Write Quests
-    quest_file = os.path.join(data_dir, "quests.txt")
-    if not os.path.exists(quest_file):
-        with open(quest_file, 'w') as f:
-            f.write('\n\n'.join(DEFAULT_QUESTS))
-            
-    # Write Items
-    item_file = os.path.join(data_dir, "items.txt")
-    if not os.path.exists(item_file):
-        with open(item_file, 'w') as f:
-            f.write('\n\n'.join(DEFAULT_ITEMS))
-            
-    print("Default data files created in the 'data/' directory.")
+    """Create default data files if they don't exist"""
+    os.makedirs("data", exist_ok=True)
 
-# ============================================================================
-# TESTING
-# ============================================================================
+    quests_content = """QUEST_ID: first_steps
+TITLE: First Steps
+DESCRIPTION: Begin your adventure by defeating your first enemy
+REWARD_XP: 50
+REWARD_GOLD: 25
+REQUIRED_LEVEL: 1
+PREREQUISITE: NONE
 
-if __name__ == "__main__":
-    print("=== GAME DATA MODULE TEST ===")
-    
-    # Test creating default files
-    create_default_data_files()
-    
-    # Test loading quests
-    try:
-        quests = load_quests()
-        print(f"Loaded {len(quests)} quests:")
-        for q_id, q_data in quests.items():
-            print(f" - {q_data['TITLE']} (Lvl {q_data['REQUIRED_LEVEL']})")
-    except MissingDataFileError:
-        print("Quest file not found (should not happen after creation)")
-    except InvalidDataFormatError as e:
-        print(f"Invalid quest format: {e}")
-    except CorruptedDataError as e:
-        print(f"Corrupted quest file: {e}")
-    
-    # Test loading items
-    try:
-        items = load_items()
-        print(f"Loaded {len(items)} items:")
-        for i_id, i_data in items.items():
-            print(f" - {i_data['NAME']} ({i_data['TYPE']})")
-    except MissingDataFileError:
-        print("Item file not found (should not happen after creation)")
-    except InvalidDataFormatError as e:
-        print(f"Invalid item format: {e}")
-    except CorruptedDataError as e:
-        print(f"Corrupted item file: {e}")
+QUEST_ID: goblin_hunter
+TITLE: Goblin Hunter
+DESCRIPTION: The village is being terrorized by goblins
+REWARD_XP: 100
+REWARD_GOLD: 75
+REQUIRED_LEVEL: 2
+PREREQUISITE: first_steps
+
+QUEST_ID: equipment_upgrade
+TITLE: Better Equipment
+DESCRIPTION: Visit the shop and purchase your first equipment
+REWARD_XP: 75
+REWARD_GOLD: 50
+REQUIRED_LEVEL: 2
+PREREQUISITE: first_steps
+
+QUEST_ID: orc_menace
+TITLE: The Orc Menace
+DESCRIPTION: Defeat the band of orcs near the forest
+REWARD_XP: 200
+REWARD_GOLD: 150
+REQUIRED_LEVEL: 3
+PREREQUISITE: goblin_hunter
+
+QUEST_ID: dragon_slayer
+TITLE: Dragon Slayer
+DESCRIPTION: Face the fearsome dragon threatening the kingdom
+REWARD_XP: 500
+REWARD_GOLD: 500
+REQUIRED_LEVEL: 6
+PREREQUISITE: orc_menace
+
+QUEST_ID: treasure_hunter
+TITLE: Treasure Hunter
+DESCRIPTION: Collect 5 different items for your collection
+REWARD_XP: 150
+REWARD_GOLD: 100
+REQUIRED_LEVEL: 3
+PREREQUISITE: equipment_upgrade
+
+QUEST_ID: master_adventurer
+TITLE: Master Adventurer
+DESCRIPTION: Reach level 10 to prove yourself as a true adventurer
+REWARD_XP: 1000
+REWARD_GOLD: 1000
+REQUIRED_LEVEL: 10
+PREREQUISITE: dragon_slayer
+"""
+
+    items_content = """ITEM_ID: health_potion
+NAME: Health Potion
+TYPE: consumable
+EFFECT: health:20
+COST: 25
+DESCRIPTION: Restores 20 health points
+
+ITEM_ID: super_health_potion
+NAME: Super Health Potion
+TYPE: consumable
+EFFECT: health:50
+COST: 75
+DESCRIPTION: Restores 50 health points
+
+ITEM_ID: iron_sword
+NAME: Iron Sword
+TYPE: weapon
+EFFECT: strength:5
+COST: 100
+DESCRIPTION: A sturdy iron sword that increases strength
+
+ITEM_ID: steel_sword
+NAME: Steel Sword
+TYPE: weapon
+EFFECT: strength:10
+COST: 250
+DESCRIPTION: A masterwork steel sword for experienced warriors
+
+ITEM_ID: fire_staff
+NAME: Fire Staff
+TYPE: weapon
+EFFECT: magic:8
+COST: 200
+DESCRIPTION: A magical staff imbued with fire magic
+
+ITEM_ID: leather_armor
+NAME: Leather Armor
+TYPE: armor
+EFFECT: max_health:10
+COST: 75
+DESCRIPTION: Light armor that increases maximum health
+
+ITEM_ID: steel_armor
+NAME: Steel Armor
+TYPE: armor
+EFFECT: max_health:25
+COST: 200
+DESCRIPTION: Heavy armor providing excellent protection
+
+ITEM_ID: magic_robe
+NAME: Magic Robe
+TYPE: armor
+EFFECT: magic:5
+COST: 150
+DESCRIPTION: Enchanted robes that enhance magical power
+
+ITEM_ID: strength_elixir
+NAME: Strength Elixir
+TYPE: consumable
+EFFECT: strength:3
+COST: 50
+DESCRIPTION: Permanently increases strength by 3
+
+ITEM_ID: wisdom_elixir
+NAME: Wisdom Elixir
+TYPE: consumable
+EFFECT: magic:3
+COST: 50
+DESCRIPTION: Permanently increases magic by 3
+"""
+
+    if not os.path.exists("data/quests.txt"):
+        with open("data/quests.txt", 'w') as f:
+            f.write(quests_content)
+
+    if not os.path.exists("data/items.txt"):
+        with open("data/items.txt", 'w') as f:
+            f.write(items_content)
