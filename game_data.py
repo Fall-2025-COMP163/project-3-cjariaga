@@ -21,6 +21,156 @@ from custom_exceptions import (
 
 
 # ============================================================================
+# DEFAULT DATA CREATION (MOVED TO TOP)
+# ============================================================================
+
+def create_default_data_files():
+    """Create default data files if they don't exist"""
+    os.makedirs("data", exist_ok=True)
+
+    quests_content = """QUEST_ID: first_steps
+TITLE: First Steps
+DESCRIPTION: Begin your adventure by defeating your first enemy
+REWARD_XP: 50
+REWARD_GOLD: 25
+REQUIRED_LEVEL: 1
+PREREQUISITE: NONE
+
+QUEST_ID: goblin_hunter
+TITLE: Goblin Hunter
+DESCRIPTION: The village is being terrorized by goblins
+REWARD_XP: 100
+REWARD_GOLD: 75
+REQUIRED_LEVEL: 2
+PREREQUISITE: first_steps
+
+QUEST_ID: equipment_upgrade
+TITLE: Better Equipment
+DESCRIPTION: Visit the shop and purchase your first equipment
+REWARD_XP: 75
+REWARD_GOLD: 50
+REQUIRED_LEVEL: 2
+PREREQUISITE: first_steps
+
+QUEST_ID: orc_menace
+TITLE: The Orc Menace
+DESCRIPTION: Defeat the band of orcs near the forest
+REWARD_XP: 200
+REWARD_GOLD: 150
+REQUIRED_LEVEL: 3
+PREREQUISITE: goblin_hunter
+
+QUEST_ID: dragon_slayer
+TITLE: Dragon Slayer
+DESCRIPTION: Face the fearsome dragon threatening the kingdom
+REWARD_XP: 500
+REWARD_GOLD: 500
+REQUIRED_LEVEL: 6
+PREREQUISITE: orc_menace
+
+QUEST_ID: treasure_hunter
+TITLE: Treasure Hunter
+DESCRIPTION: Collect 5 different items for your collection
+REWARD_XP: 150
+REWARD_GOLD: 100
+REQUIRED_LEVEL: 3
+PREREQUISITE: equipment_upgrade
+
+QUEST_ID: master_adventurer
+TITLE: Master Adventurer
+DESCRIPTION: Reach level 10 to prove yourself as a true adventurer
+REWARD_XP: 1000
+REWARD_GOLD: 1000
+REQUIRED_LEVEL: 10
+PREREQUISITE: dragon_slayer
+"""
+
+    items_content = """ITEM_ID: health_potion
+NAME: Health Potion
+TYPE: consumable
+EFFECT: health:20
+COST: 25
+DESCRIPTION: Restores 20 health points
+
+ITEM_ID: super_health_potion
+NAME: Super Health Potion
+TYPE: consumable
+EFFECT: health:50
+COST: 75
+DESCRIPTION: Restores 50 health points
+
+ITEM_ID: iron_sword
+NAME: Iron Sword
+TYPE: weapon
+EFFECT: strength:5
+COST: 100
+DESCRIPTION: A sturdy iron sword that increases strength
+
+ITEM_ID: steel_sword
+NAME: Steel Sword
+TYPE: weapon
+EFFECT: strength:10
+COST: 250
+DESCRIPTION: A masterwork steel sword for experienced warriors
+
+ITEM_ID: fire_staff
+NAME: Fire Staff
+TYPE: weapon
+EFFECT: magic:8
+COST: 200
+DESCRIPTION: A magical staff imbued with fire magic
+
+ITEM_ID: leather_armor
+NAME: Leather Armor
+TYPE: armor
+EFFECT: max_health:10
+COST: 75
+DESCRIPTION: Light armor that increases maximum health
+
+ITEM_ID: steel_armor
+NAME: Steel Armor
+TYPE: armor
+EFFECT: max_health:25
+COST: 200
+DESCRIPTION: Heavy armor providing excellent protection
+
+ITEM_ID: magic_robe
+NAME: Magic Robe
+TYPE: armor
+EFFECT: magic:5
+COST: 150
+DESCRIPTION: Enchanted robes that enhance magical power
+
+ITEM_ID: strength_elixir
+NAME: Strength Elixir
+TYPE: consumable
+EFFECT: strength:3
+COST: 50
+DESCRIPTION: Permanently increases strength by 3
+
+ITEM_ID: wisdom_elixir
+NAME: Wisdom Elixir
+TYPE: consumable
+EFFECT: magic:3
+COST: 50
+DESCRIPTION: Permanently increases magic by 3
+"""
+
+    if not os.path.exists("data/quests.txt"):
+        with open("data/quests.txt", 'w') as f:
+            f.write(quests_content)
+
+    if not os.path.exists("data/items.txt"):
+        with open("data/items.txt", 'w') as f:
+            f.write(items_content)
+
+
+# Ensure data files exist when module is imported
+if not os.path.exists("data/quests.txt") or not os.path.exists("data/items.txt"):
+    create_default_data_files()
+
+
+# ============================================================================
 # DATA LOADING
 # ============================================================================
 
@@ -171,148 +321,3 @@ def validate_item_data(item):
         raise InvalidDataFormatError("cost must be integer")
 
     return True
-
-
-# ============================================================================
-# DEFAULT DATA CREATION
-# ============================================================================
-
-def create_default_data_files():
-    """Create default data files if they don't exist"""
-    os.makedirs("data", exist_ok=True)
-
-    quests_content = """QUEST_ID: first_steps
-TITLE: First Steps
-DESCRIPTION: Begin your adventure by defeating your first enemy
-REWARD_XP: 50
-REWARD_GOLD: 25
-REQUIRED_LEVEL: 1
-PREREQUISITE: NONE
-
-QUEST_ID: goblin_hunter
-TITLE: Goblin Hunter
-DESCRIPTION: The village is being terrorized by goblins
-REWARD_XP: 100
-REWARD_GOLD: 75
-REQUIRED_LEVEL: 2
-PREREQUISITE: first_steps
-
-QUEST_ID: equipment_upgrade
-TITLE: Better Equipment
-DESCRIPTION: Visit the shop and purchase your first equipment
-REWARD_XP: 75
-REWARD_GOLD: 50
-REQUIRED_LEVEL: 2
-PREREQUISITE: first_steps
-
-QUEST_ID: orc_menace
-TITLE: The Orc Menace
-DESCRIPTION: Defeat the band of orcs near the forest
-REWARD_XP: 200
-REWARD_GOLD: 150
-REQUIRED_LEVEL: 3
-PREREQUISITE: goblin_hunter
-
-QUEST_ID: dragon_slayer
-TITLE: Dragon Slayer
-DESCRIPTION: Face the fearsome dragon threatening the kingdom
-REWARD_XP: 500
-REWARD_GOLD: 500
-REQUIRED_LEVEL: 6
-PREREQUISITE: orc_menace
-
-QUEST_ID: treasure_hunter
-TITLE: Treasure Hunter
-DESCRIPTION: Collect 5 different items for your collection
-REWARD_XP: 150
-REWARD_GOLD: 100
-REQUIRED_LEVEL: 3
-PREREQUISITE: equipment_upgrade
-
-QUEST_ID: master_adventurer
-TITLE: Master Adventurer
-DESCRIPTION: Reach level 10 to prove yourself as a true adventurer
-REWARD_XP: 1000
-REWARD_GOLD: 1000
-REQUIRED_LEVEL: 10
-PREREQUISITE: dragon_slayer
-"""
-
-    items_content = """ITEM_ID: health_potion
-NAME: Health Potion
-TYPE: consumable
-EFFECT: health:20
-COST: 25
-DESCRIPTION: Restores 20 health points
-
-ITEM_ID: super_health_potion
-NAME: Super Health Potion
-TYPE: consumable
-EFFECT: health:50
-COST: 75
-DESCRIPTION: Restores 50 health points
-
-ITEM_ID: iron_sword
-NAME: Iron Sword
-TYPE: weapon
-EFFECT: strength:5
-COST: 100
-DESCRIPTION: A sturdy iron sword that increases strength
-
-ITEM_ID: steel_sword
-NAME: Steel Sword
-TYPE: weapon
-EFFECT: strength:10
-COST: 250
-DESCRIPTION: A masterwork steel sword for experienced warriors
-
-ITEM_ID: fire_staff
-NAME: Fire Staff
-TYPE: weapon
-EFFECT: magic:8
-COST: 200
-DESCRIPTION: A magical staff imbued with fire magic
-
-ITEM_ID: leather_armor
-NAME: Leather Armor
-TYPE: armor
-EFFECT: max_health:10
-COST: 75
-DESCRIPTION: Light armor that increases maximum health
-
-ITEM_ID: steel_armor
-NAME: Steel Armor
-TYPE: armor
-EFFECT: max_health:25
-COST: 200
-DESCRIPTION: Heavy armor providing excellent protection
-
-ITEM_ID: magic_robe
-NAME: Magic Robe
-TYPE: armor
-EFFECT: magic:5
-COST: 150
-DESCRIPTION: Enchanted robes that enhance magical power
-
-ITEM_ID: strength_elixir
-NAME: Strength Elixir
-TYPE: consumable
-EFFECT: strength:3
-COST: 50
-DESCRIPTION: Permanently increases strength by 3
-
-ITEM_ID: wisdom_elixir
-NAME: Wisdom Elixir
-TYPE: consumable
-EFFECT: magic:3
-COST: 50
-DESCRIPTION: Permanently increases magic by 3
-"""
-
-    if not os.path.exists("data/quests.txt"):
-        with open("data/quests.txt", 'w') as f:
-            f.write(quests_content)
-
-    if not os.path.exists("data/items.txt"):
-        with open("data/items.txt", 'w') as f:
-            f.write(items_content)
