@@ -75,6 +75,8 @@ def save_character(character, save_directory="data/save_games"):
         f.write(f"INVENTORY: {','.join(character['inventory'])}\n")
         f.write(f"ACTIVE_QUESTS: {','.join(character['active_quests'])}\n")
         f.write(f"COMPLETED_QUESTS: {','.join(character['completed_quests'])}\n")
+        f.write(f"EQUIPPED_WEAPON: {character.get('equipped_weapon') or ''}\n")
+        f.write(f"EQUIPPED_ARMOR: {character.get('equipped_armor') or ''}\n")
 
     return True
 
@@ -122,6 +124,10 @@ def load_character(character_name, save_directory="data/save_games"):
                     character['active_quests'] = value.split(',') if value else []
                 elif key == "COMPLETED_QUESTS":
                     character['completed_quests'] = value.split(',') if value else []
+                elif key == "EQUIPPED_WEAPON":
+                    character['equipped_weapon'] = value if value else None
+                elif key == "EQUIPPED_ARMOR":
+                    character['equipped_armor'] = value if value else None
 
     except (IOError, ValueError) as e:
         raise SaveFileCorruptedError(f"Corrupted save file: {e}")
