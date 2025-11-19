@@ -2,200 +2,190 @@
 COMP 163 - Project 3: Quest Chronicles
 Quest Handler Module - Starter Code
 
-Name: [Your Name Here]
+Name: Clayan Ariaga
 
-AI Usage: [Document any AI assistance used]
+AI Usage: Gemini, was used to help implementing
+quest logic by checking prerequisites, levels, and completion status.
+It also required integrating with the character_manager module to
+grant rewards, demonstrating cross-module interaction.
 
 This module handles quest management, dependencies, and completion.
 """
-
+import character_manager
 from custom_exceptions import (
-    InventoryFullError,
-    ItemNotFoundError,
-    InsufficientResourcesError,
-    InvalidItemTypeError
+    QuestNotFoundError,
+    QuestRequirementsNotMetError,
+    QuestAlreadyCompletedError,
+    QuestNotActiveError,
+    InsufficientLevelError
 )
 
-# Maximum inventory size
-MAX_INVENTORY_SIZE = 20
 
 # ============================================================================
-# INVENTORY MANAGEMENT
+# QUEST MANAGEMENT
 # ============================================================================
 
-def add_item_to_inventory(character, item_id):
-    """
-    Add an item to character's inventory.
-    
-    Returns: True if added successfully
-    Raises: InventoryFullError if inventory is at max capacity
-    """
-    if len(character['inventory']) >= MAX_INVENTORY_SIZE:
-        raise InventoryFullError("Inventory is full! Cannot pick up item.")
-        
-    character['inventory'].append(item_id)
+def accept_quest(character, quest_id, quest_data):
+    """Accept a new quest"""
+    if quest_id not in quest_data:
+        raise QuestNotFoundError(f"Quest '{quest_id}' does not exist.")
+
+    quest = quest_data[quest_id]
+
+    if quest_id in character['completed_quests']:
+        raise QuestAlreadyCompletedError(f"Quest already completed.")
+
+    if quest_id in character['active_quests']:
+        raise QuestAlreadyCompletedError(f"Quest already active.")
+
+    if character['level'] < quest['required_level']:
+        raise InsufficientLevelError(f"Need level {quest['required_level']}.")
+
+    if quest['prerequisite'] != 'NONE' and quest['prerequisite'] not in character['completed_quests']:
+        raise QuestRequirementsNotMetError(f"Need to complete '{quest['prerequisite']}' first.")
+
+    character['active_quests'].append(quest_id)
     return True
 
-def remove_item_from_inventory(character, item_id):
-    """
-    Remove an item from character's inventory.
-    
-    Returns: True if removed successfully
-    Raises: ItemNotFoundError if item not in inventory
-    """
-    try:
-        character['inventory'].remove(item_id)
-        return True
-    except ValueError:
-        raise ItemNotFoundError(f"Item ID '{item_id}' not found in inventory.")
 
-def has_item(character, item_id, quantity=1):
-    """
-    Check if character has the required quantity of an item.
-    
-    Returns: True if character has item, False otherwise.
-    """
-    return character['inventory'].count(item_id) >= quantity
+def complete_quest(character, quest_id, quest_data):
+    """Complete an active quest and grant rewards"""
+    if quest_id not in quest_data:
+        raise QuestNotFoundError(f"Quest '{quest_id}' does not exist.")
 
-def use_item(character, item_id, all_items):
-    """
-    Use a consumable item.
-    
-    Args:
-        character: Character dictionary
-        item_id: Item to use (must be consumable)
-        all_items: Dictionary of all item data
-    
-    Returns: True if used successfully
-    Raises: 
-        ItemNotFoundError if item not in inventory or not in all_items
-        InvalidItemTypeError if item is not consumable
-    """
-    # 1. Check if item exists in all_items
-    item_data = all_items.get(item_id)
-    if not item_data:
-        # Item exists in inventory but not in master data, treat as not found/corrupted data
-        raise ItemNotFoundError(f"Item data for ID '{item_id}' not found.")
-        
-    # 2. Check if item is in inventory
-    if not has_item(character, item_id):
-        raise ItemNotFoundError(f"You do not have a '{item_data['NAME']}' to use.")
-        
-    # 3. Check item type
-    if item_data['TYPE'] != 'consumable':
-        raise InvalidItemTypeError(f"Item '{item_data['NAME']}' is a {item_data['TYPE']} and cannot be 'used' this way.")
-        
-    # 4. Apply effect and remove item
-    effect_str = item_data['EFFECT']
-    effect_stat, effect_value = effect_str.split(':')
-    effect_value = int(effect_value)
-    
-    apply_stat_effect(character, effect_stat, effect_value)
-    remove_item_from_inventory(character, item_id)
-    
-    print(f"✨ Used {item_data['NAME']}. {effect_stat.capitalize()} restored by {effect_value}.")
-    
+    if quest_id not in character['active_quests']:
+        raise QuestNotActiveError(f"Quest '{quest_id}' is not active.")
+
+    quest = quest_data[quest_id]
+
+    character['active_quests'].remove(quest_id)
+    character['completed_quests'].append(quest_id)
+
+    character_manager.gain_experience(character, quest['reward_xp'])
+    character_manager.add_gold(character, quest['reward_gold'])
+
+    return {'xp': quest['reward_xp'], 'gold': quest['reward_gold']}
+
+
+def abandon_quest(character, quest_id):
+    """Remove quest from active quests"""
+    if quest_id not in character['active_quests']:
+        raise QuestNotActiveError(f"Quest '{quest_id}' is not active.")
+    character['active_quests'].remove(quest_id)
     return True
 
-def apply_stat_effect(character, stat_name, value):
-    """
-    Apply a positive stat change to the character.
-    
-    Ensures health cannot exceed max_health.
-    """
-    if stat_name == 'health':
-        character['health'] += value
-        if character['health'] > character['max_health']:
-            character['health'] = character['max_health']
-            
-    elif stat_name == 'magic':
-        # Placeholder for future mana system
-        character['magic'] += value
-        print(f"(Magic Stat Increased: +{value})")
-        
-    elif stat_name == 'strength':
-        character['strength'] += value
-        print(f"(Strength Stat Increased: +{value})")
-        
-    elif stat_name == 'max_health':
-        character['max_health'] += value
-        character['health'] += value # Also heal for the amount
-        
-    else:
-        # For development, just print a warning for unhandled stats
-        print(f"Warning: Unhandled stat effect applied: {stat_name}:{value}")
-        
-def display_inventory(character, item_data_dict):
-    """
-    Display character's inventory in formatted way.
-    """
-    inventory_counts = {}
-    for item_id in character['inventory']:
-        inventory_counts[item_id] = inventory_counts.get(item_id, 0) + 1
-        
-    print("\n==================== INVENTORY ====================")
-    print(f"Gold: {character['gold']}")
-    if not inventory_counts:
-        print("Inventory is empty.")
-        
-    for item_id, count in inventory_counts.items():
-        item_name = item_data_dict.get(item_id, {}).get('NAME', item_id)
-        item_type = item_data_dict.get(item_id, {}).get('TYPE', 'Unknown')
-        print(f" - {item_name} (x{count}) [{item_type.capitalize()}]")
-        
-    print("===================================================")
+
+def get_active_quests(character, quest_data):
+    """Get all active quests"""
+    return [quest_data[qid] for qid in character['active_quests'] if qid in quest_data]
+
+
+def get_completed_quests(character, quest_data):
+    """Get all completed quests"""
+    return [quest_data[qid] for qid in character['completed_quests'] if qid in quest_data]
+
+
+def get_available_quests(character, quest_data):
+    """Get quests that can be accepted"""
+    available = []
+    for qid, quest in quest_data.items():
+        if qid in character['completed_quests'] or qid in character['active_quests']:
+            continue
+        if character['level'] < quest['required_level']:
+            continue
+        if quest['prerequisite'] != 'NONE' and quest['prerequisite'] not in character['completed_quests']:
+            continue
+        available.append(quest)
+    return available
+
 
 # ============================================================================
-# TESTING
+# QUEST TRACKING
 # ============================================================================
 
-if __name__ == "__main__":
-    from game_data import load_items, create_default_data_files
-    
-    print("=== INVENTORY SYSTEM TEST ===")
-    
-    # Setup data
-    create_default_data_files()
+def is_quest_completed(character, quest_id):
+    """Check if quest is completed"""
+    return quest_id in character['completed_quests']
+
+
+def is_quest_active(character, quest_id):
+    """Check if quest is active"""
+    return quest_id in character['active_quests']
+
+
+def can_accept_quest(character, quest_id, quest_data, raise_exceptions=False):
+    """Check if character can accept quest"""
     try:
-        test_items = load_items()
+        if quest_id not in quest_data:
+            raise QuestNotFoundError("Quest not found")
+        if quest_id in character['completed_quests']:
+            raise QuestAlreadyCompletedError("Already completed")
+        if quest_id in character['active_quests']:
+            raise QuestAlreadyCompletedError("Already active")
+
+        quest = quest_data[quest_id]
+        if character['level'] < quest['required_level']:
+            raise InsufficientLevelError("Level too low")
+        if quest['prerequisite'] != 'NONE' and quest['prerequisite'] not in character['completed_quests']:
+            raise QuestRequirementsNotMetError("Prerequisite not met")
+
+        return True, "Can accept"
     except Exception as e:
-        print(f"Could not load items: {e}")
-        test_items = {}
-        
-    test_char = {'inventory': [], 'gold': 100, 'health': 80, 'max_health': 80, 'strength': 10, 'magic': 5}
-    
-    # 1. Test adding items
-    try:
-        add_item_to_inventory(test_char, "health_potion")
-        add_item_to_inventory(test_char, "health_potion")
-        add_item_to_inventory(test_char, "rusty_sword")
-        print(f"Inventory after adding: {test_char['inventory']}")
-    except InventoryFullError:
-        print("Inventory is full! (Error)")
-        
-    # 2. Test removal and display
-    display_inventory(test_char, test_items)
-    
-    try:
-        remove_item_from_inventory(test_char, "rusty_sword")
-        print(f"Inventory after removing sword: {test_char['inventory']}")
-    except ItemNotFoundError:
-        print("Item not found. (Error)")
-        
-    # 3. Test using items
-    original_health = test_char['health'] = 50
-    try:
-        use_item(test_char, "health_potion", test_items)
-        print(f"Health after potion: {test_char['health']} (was {original_health})")
-    except ItemNotFoundError as e:
-        print(f"Use item error: {e}")
-    except InvalidItemTypeError as e:
-        print(f"Use item error: {e}")
-        
-    # 4. Test max health cap
-    test_char['health'] = test_char['max_health']
-    try:
-        use_item(test_char, "health_potion", test_items)
-        print(f"Health should be max: {test_char['health']}/{test_char['max_health']}")
-    except Exception:
-        pass # Should pass silently
+        if raise_exceptions:
+            raise
+        return False, str(e)
+
+
+# ============================================================================
+# QUEST STATISTICS
+# ============================================================================
+
+def get_quest_completion_percentage(character, quest_data):
+    """Calculate completion percentage"""
+    if not quest_data:
+        return 100.0
+    return (len(character['completed_quests']) / len(quest_data)) * 100
+
+
+def get_total_quest_rewards_earned(character, quest_data):
+    """Calculate total rewards from completed quests"""
+    total_xp = 0
+    total_gold = 0
+    for qid in character['completed_quests']:
+        if qid in quest_data:
+            total_xp += quest_data[qid]['reward_xp']
+            total_gold += quest_data[qid]['reward_gold']
+    return {'total_xp': total_xp, 'total_gold': total_gold}
+
+
+# ============================================================================
+# DISPLAY
+# ============================================================================
+
+def display_quest_list(quests, quest_data):
+    """Display list of quests"""
+    if not quests:
+        print("  No quests.")
+        return
+    for q in quests:
+        print(f"  [{q['quest_id']}] {q['title']} (Lv {q['required_level']})")
+
+
+def display_character_quest_progress(character, quest_data):
+    """Display quest progress"""
+    print(f"\nActive: {len(character['active_quests'])}")
+    print(f"Completed: {len(character['completed_quests'])}")
+    print(f"Progress: {get_quest_completion_percentage(character, quest_data):.1f}%")
+
+
+# ============================================================================
+# VALIDATION
+# ============================================================================
+
+def validate_quest_prerequisites(quest_data):
+    """Validate all quest prerequisites exist"""
+    for qid, quest in quest_data.items():
+        prereq = quest['prerequisite']
+        if prereq != 'NONE' and prereq not in quest_data:
+            raise QuestNotFoundError(f"Quest '{qid}' has invalid prerequisite '{prereq}'")
+    return True
