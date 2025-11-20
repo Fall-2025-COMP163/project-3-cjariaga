@@ -8,7 +8,6 @@ This module defines all custom exceptions used throughout the game.
 # ============================================================================
 # BASE GAME EXCEPTIONS
 # ============================================================================
-
 class GameError(Exception):
     """Base exception for all game-related errors"""
     pass
