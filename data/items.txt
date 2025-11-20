@@ -67,4 +67,3 @@ TYPE: consumable
 EFFECT: magic:3
 COST: 50
 DESCRIPTION: Permanently increases magic by 3
-
