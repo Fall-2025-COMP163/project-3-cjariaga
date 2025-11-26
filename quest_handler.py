@@ -42,9 +42,9 @@ def accept_quest(character, quest_id, all_quests):
         return f"Quest '{quest_id}' already accepted."
     
     # Check level requirement
-    if character['level'] < quest['required_level']:
+    if character['level'] < quest.get('required_level', 1):
         raise InsufficientLevelError(
-            f"Level {quest['required_level']} required (you are level {character['level']})"
+            f"Level {quest.get('required_level', 1)} required (you are level {character['level']})"
         )
     
     # Check prerequisites
@@ -57,7 +57,8 @@ def accept_quest(character, quest_id, all_quests):
     
     # Accept quest
     character['active_quests'].append(quest_id)
-    return f"Accepted quest: {quest['title']}"
+    quest_title = quest.get('title', quest_id)
+    return f"Accepted quest: {quest_title}"
 
 
 def complete_quest(character, quest_id, all_quests):
@@ -74,11 +75,15 @@ def complete_quest(character, quest_id, all_quests):
     character['active_quests'].remove(quest_id)
     character['completed_quests'].append(quest_id)
     
-    # Grant rewards
-    character_manager.gain_experience(character, quest['reward_xp'])
-    character_manager.add_gold(character, quest['reward_gold'])
+    # Grant rewards (with defaults for test compatibility)
+    reward_xp = quest.get('reward_xp', 0)
+    reward_gold = quest.get('reward_gold', 0)
     
-    return f"Completed: {quest['title']} | +{quest['reward_xp']} XP, +{quest['reward_gold']} gold"
+    character_manager.gain_experience(character, reward_xp)
+    character_manager.add_gold(character, reward_gold)
+    
+    quest_title = quest.get('title', quest_id)
+    return f"Completed: {quest_title} | +{reward_xp} XP, +{reward_gold} gold"
 
 
 def abandon_quest(character, quest_id):
@@ -114,7 +119,7 @@ def get_available_quests(character, all_quests):
             continue
         
         # Check level requirement
-        if character['level'] < quest['required_level']:
+        if character['level'] < quest.get('required_level', 1):
             continue
         
         # Check prerequisite
