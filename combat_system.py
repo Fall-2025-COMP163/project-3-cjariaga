@@ -2,7 +2,7 @@
 COMP 163 - Project 3: Quest Chronicles
 Combat System Module - Starter Code
 
-Name: Clayan Ariaga
+Name: Clayan Ariaga 
 
 AI Usage: Gemini in implemanting turn-based logic, damage formulas,
 and class-specific special abilities. It also required integration
