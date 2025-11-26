@@ -34,29 +34,30 @@ def accept_quest(character, quest_id, all_quests):
     quest = all_quests[quest_id]
     
     # Check if already completed
-    if quest_id in character['completed_quests']:
+    if quest_id in character.get('completed_quests', []):
         raise QuestAlreadyCompletedError(f"Quest '{quest_id}' already completed.")
     
     # Check if already active
-    if quest_id in character['active_quests']:
+    if quest_id in character.get('active_quests', []):
         return f"Quest '{quest_id}' already accepted."
     
-    # Check level requirement
-    if character['level'] < quest.get('required_level', 1):
+    # Check level requirement (default to 1 if missing)
+    required_level = quest.get('required_level', 1)
+    if character.get('level', 0) < required_level:
         raise InsufficientLevelError(
-            f"Level {quest.get('required_level', 1)} required (you are level {character['level']})"
+            f"Level {required_level} required (you are level {character.get('level', 0)})"
         )
     
     # Check prerequisites
-    prerequisite = quest.get('prerequisite', 'NONE')
+    prerequisite = quest.get('prerequisite') or 'NONE'
     if prerequisite != 'NONE':
-        if prerequisite not in character['completed_quests']:
+        if prerequisite not in character.get('completed_quests', []):
             raise QuestRequirementsNotMetError(
                 f"Must complete '{prerequisite}' first."
             )
     
     # Accept quest
-    character['active_quests'].append(quest_id)
+    character.setdefault('active_quests', []).append(quest_id)
     quest_title = quest.get('title', quest_id)
     return f"Accepted quest: {quest_title}"
 
@@ -66,19 +67,18 @@ def complete_quest(character, quest_id, all_quests):
     if quest_id not in all_quests:
         raise QuestNotFoundError(f"Quest '{quest_id}' not found.")
     
-    if quest_id not in character['active_quests']:
+    if quest_id not in character.get('active_quests', []):
         raise QuestNotActiveError(f"Quest '{quest_id}' is not active.")
     
     quest = all_quests[quest_id]
     
     # Remove from active and add to completed
     character['active_quests'].remove(quest_id)
-    character['completed_quests'].append(quest_id)
+    character.setdefault('completed_quests', []).append(quest_id)
     
-    # Grant rewards (with defaults for test compatibility)
+    # Grant rewards (default to 0 if missing)
     reward_xp = quest.get('reward_xp', 0)
     reward_gold = quest.get('reward_gold', 0)
-    
     character_manager.gain_experience(character, reward_xp)
     character_manager.add_gold(character, reward_gold)
     
@@ -88,7 +88,7 @@ def complete_quest(character, quest_id, all_quests):
 
 def abandon_quest(character, quest_id):
     """Abandon an active quest"""
-    if quest_id not in character['active_quests']:
+    if quest_id not in character.get('active_quests', []):
         raise QuestNotActiveError(f"Quest '{quest_id}' is not active.")
     
     character['active_quests'].remove(quest_id)
@@ -101,12 +101,12 @@ def abandon_quest(character, quest_id):
 
 def get_active_quests(character, all_quests):
     """Get list of character's active quests"""
-    return [all_quests[q_id] for q_id in character['active_quests'] if q_id in all_quests]
+    return [all_quests[q_id] for q_id in character.get('active_quests', []) if q_id in all_quests]
 
 
 def get_completed_quests(character, all_quests):
     """Get list of character's completed quests"""
-    return [all_quests[q_id] for q_id in character['completed_quests'] if q_id in all_quests]
+    return [all_quests[q_id] for q_id in character.get('completed_quests', []) if q_id in all_quests]
 
 
 def get_available_quests(character, all_quests):
@@ -115,16 +115,17 @@ def get_available_quests(character, all_quests):
     
     for quest_id, quest in all_quests.items():
         # Skip if already active or completed
-        if quest_id in character['active_quests'] or quest_id in character['completed_quests']:
+        if quest_id in character.get('active_quests', []) or quest_id in character.get('completed_quests', []):
             continue
         
-        # Check level requirement
-        if character['level'] < quest.get('required_level', 1):
+        # Check level requirement (default to 1)
+        required_level = quest.get('required_level', 1)
+        if character.get('level', 0) < required_level:
             continue
         
         # Check prerequisite
-        prerequisite = quest.get('prerequisite', 'NONE')
-        if prerequisite != 'NONE' and prerequisite not in character['completed_quests']:
+        prerequisite = quest.get('prerequisite') or 'NONE'
+        if prerequisite != 'NONE' and prerequisite not in character.get('completed_quests', []):
             continue
         
         available.append(quest)
@@ -150,7 +151,7 @@ def validate_quest_prerequisites(all_quests):
         rec_stack.add(quest_id)
         
         quest = all_quests[quest_id]
-        prerequisite = quest.get('prerequisite', 'NONE')
+        prerequisite = quest.get('prerequisite') or 'NONE'
         
         if prerequisite != 'NONE':
             if prerequisite not in visited:
