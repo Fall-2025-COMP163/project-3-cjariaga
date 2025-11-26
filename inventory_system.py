@@ -36,13 +36,19 @@ def _resolve_item(item_id, item_data):
     if item_data is None:
         raise ItemNotFoundError(f"No item data provided for '{item_id}'.")
 
-    if isinstance(item_data, dict) and 'type' in item_data and (item_data.get('id') == item_id or True):
-        # Heuristic: if the provided dict looks like an item (has 'type'), treat as the item itself
-        return item_data
-    # Otherwise, expect mapping
-    if item_id not in item_data:
-        raise ItemNotFoundError(f"Item data for '{item_id}' not found.")
-    return item_data[item_id]
+    # If it's a mapping keyed by item ids, return that entry
+    if isinstance(item_data, dict):
+        if item_id in item_data:
+            return item_data[item_id]
+
+        # If the dict looks like a single item (contains typical item fields),
+        # treat it as item metadata for the requested item_id.
+        known_keys = {'type', 'cost', 'effect', 'name', 'id'}
+        if any(k in item_data for k in known_keys):
+            return item_data
+
+    # Otherwise, can't resolve
+    raise ItemNotFoundError(f"Item data for '{item_id}' not found.")
 
 
 # ============================================================================
