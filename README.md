@@ -2,7 +2,7 @@
 **Student Name:** Clayan Ariaga  
 **Date:** November 18, 2025  
 **AI Usage Policy:** Free Use (with explanation requirement)
-
+ 
 ---
 
 ## Project Overview
