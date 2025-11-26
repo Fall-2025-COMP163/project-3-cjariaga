@@ -3,7 +3,7 @@ COMP 163 - Project 3: Quest Chronicles
 Custom Exception Definitions
 
 This module defines all custom exceptions used throughout the game.
-"""
+""" 
 
 # ============================================================================
 # BASE GAME EXCEPTIONS
